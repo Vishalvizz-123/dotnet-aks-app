@@ -1,0 +1,141 @@
+trigger:
+  branches:
+    include:
+      - develop
+      - main
+
+variables:
+  imageName: dotnet-aks-app
+  dockerfilePath: Dockerfile
+
+stages:
+
+# =========================
+# CI STAGE (Build + Docker)
+# =========================
+- stage: CI
+  displayName: "CI - Build and Docker Image"
+  jobs:
+  - job: Build
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+    - task: UseDotNet@2
+      displayName: "Install .NET SDK 8"
+      inputs:
+        packageType: sdk
+        version: 8.x
+
+    - script: |
+        dotnet restore src/WebApi/WebApi.csproj
+        dotnet build src/WebApi/WebApi.csproj -c Release
+      displayName: "Build .NET Web API"
+
+    - task: Docker@2
+      displayName: "Build Docker Image"
+      inputs:
+        command: build
+        Dockerfile: $(dockerfilePath)
+        repository: $(imageName)
+        tags: |
+          $(Build.BuildId)
+
+# =========================
+# DEV DEPLOYMENT STAGE
+# =========================
+- stage: Dev
+  displayName: "Deploy to DEV (AKS)"
+  dependsOn: CI
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/develop')
+
+  jobs:
+  - deployment: DeployDev
+    displayName: "DEV Deployment"
+    environment: dev
+    pool:
+      vmImage: ubuntu-latest
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Docker@2
+            displayName: "Push Image to ACR (DEV)"
+            inputs:
+              command: buildAndPush
+              repository: $(imageName)
+              Dockerfile: $(dockerfilePath)
+              containerRegistry: acr-service-connection
+              tags: |
+                $(Build.BuildId)
+
+          - task: HelmInstaller@1
+            displayName: "Install Helm"
+            inputs:
+              helmVersionToInstall: latest
+
+          - task: HelmDeploy@0
+            displayName: "Deploy to AKS DEV"
+            inputs:
+              connectionType: Azure Resource Manager
+              azureSubscription: azure-service-connection
+              azureResourceGroup: rg-devops
+              kubernetesCluster: aks-dev
+              command: upgrade
+              chartType: FilePath
+              chartPath: helm/webapi
+              releaseName: webapi
+              overrideValues: |
+                image.tag=$(Build.BuildId)
+                activeColor=blue
+
+# =========================
+# PROD DEPLOYMENT STAGE
+# =========================
+- stage: Prod
+  displayName: "Deploy to PROD (AKS)"
+  dependsOn: CI
+  condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+
+  jobs:
+  - deployment: DeployProd
+    displayName: "PROD Deployment"
+    environment: prod   # approvals configured in Azure DevOps UI
+    pool:
+      vmImage: ubuntu-latest
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Docker@2
+            displayName: "Push Image to ACR (PROD)"
+            inputs:
+              command: buildAndPush
+              repository: $(imageName)
+              Dockerfile: $(dockerfilePath)
+              containerRegistry: acr-service-connection
+              tags: |
+                $(Build.BuildId)
+
+          - task: HelmInstaller@1
+            displayName: "Install Helm"
+            inputs:
+              helmVersionToInstall: latest
+
+          - task: HelmDeploy@0
+            displayName: "Deploy to AKS PROD (Blue-Green)"
+            inputs:
+              connectionType: Azure Resource Manager
+              azureSubscription: azure-service-connection
+              azureResourceGroup: rg-devops
+              kubernetesCluster: aks-prod
+              command: upgrade
+              chartType: FilePath
+              chartPath: helm/webapi
+              releaseName: webapi
+              overrideValues: |
+                image.tag=$(Build.BuildId)
+                activeColor=green
+
