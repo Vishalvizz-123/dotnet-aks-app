@@ -1,26 +1,31 @@
 using Microsoft.EntityFrameworkCore;
 using WebApi.Data;
-using WebApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database connection (will come from env variable in AKS)
+// Add services
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// 🔹 Register DbContext (SQL Server example)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+        builder.Configuration.GetConnectionString("DefaultConnection")
+    )
+);
 
 var app = builder.Build();
 
-app.MapGet("/", () => "AKS .NET API running");
-
-app.MapGet("/products", async (AppDbContext db) =>
-    await db.Products.ToListAsync());
-
-app.MapPost("/products", async (Product product, AppDbContext db) =>
+// Configure middleware
+if (app.Environment.IsDevelopment())
 {
-    db.Products.Add(product);
-    await db.SaveChangesAsync();
-    return Results.Created($"/products/{product.Id}", product);
-});
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+// Health endpoint (used by AKS, probes, monitoring)
+app.MapGet("/health", () => "Healthy");
 
 app.Run();
