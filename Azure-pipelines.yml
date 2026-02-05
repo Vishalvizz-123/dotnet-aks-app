@@ -54,7 +54,7 @@ stages:
     displayName: "DEV Deployment"
     environment: dev
     pool:
-      vmImage: ubuntu-latest
+      name: Default
 
     strategy:
       runOnce:
@@ -103,7 +103,7 @@ stages:
     displayName: "PROD Deployment"
     environment: prod   # approvals configured in Azure DevOps UI
     pool:
-      vmImage: ubuntu-latest
+      name: Default
 
     strategy:
       runOnce:
