@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: myacr.azurecr.io/webapi
+  repository: dotnetaksacr.azurecr.io/Webapi
   tag: latest
 
 service:
