@@ -1,5 +1,5 @@
 apiVersion: v2
-name: Webapi
+name: webapi
 description: Helm chart for .NET Web API
 type: application
 version: 0.1.0
