@@ -1,0 +1,11 @@
+replicaCount: 1
+
+image:
+  repository: myacr.azurecr.io/webapi
+  tag: latest
+
+service:
+  type: ClusterIP
+  port: 80
+
+activeColor: blue
