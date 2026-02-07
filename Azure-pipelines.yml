@@ -84,8 +84,8 @@ stages:
               kubernetesCluster: aks-dev
               command: upgrade
               chartType: FilePath
-              chartPath: helm/Webapi
-              releaseName: Webapi
+              chartPath: Helm/Webapi
+              releaseName: Webapi-dev
               overrideValues: |
                 image.tag=$(Build.BuildId)
                 activeColor=blue
