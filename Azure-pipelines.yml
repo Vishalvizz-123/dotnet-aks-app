@@ -80,7 +80,7 @@ stages:
             inputs:
               connectionType: Azure Resource Manager
               azureSubscription: azure-service-connection
-              azureResourceGroup: rg-devops
+              azureResourceGroup: dotnet-app
               kubernetesCluster: aks-dev
               command: upgrade
               chartType: FilePath
