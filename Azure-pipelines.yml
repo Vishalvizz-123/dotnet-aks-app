@@ -67,6 +67,7 @@ stages:
               repository: $(imageName)
               Dockerfile: $(dockerfilePath)
               containerRegistry: acr-service-connection
+              arguments: --platform linux/amd64
               tags: |
                 $(Build.BuildId)
 
